@@ -15,7 +15,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 
 class TfidfEmbedder:
-    """Fallback embedder — no internet/model download required."""
+    """Fallback embedder - no internet/model download required."""
 
     def __init__(self):
         self.vectorizer = TfidfVectorizer()
@@ -60,5 +60,5 @@ def get_embedder():
     try:
         return BGEEmbedder()
     except ImportError:
-        print("[embeddings] sentence-transformers not available — using TF-IDF fallback.")
+        print("[embeddings] sentence-transformers not available - using TF-IDF fallback.")
         return TfidfEmbedder()
