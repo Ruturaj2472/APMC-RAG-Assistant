@@ -1,0 +1,22 @@
+# Core API
+fastapi>=0.110
+uvicorn>=0.29
+pydantic>=2.6
+
+# RAG / retrieval stack
+langchain>=0.1
+rank_bm25>=0.2
+qdrant-client>=1.8
+sentence-transformers>=2.6
+
+# LLM provider
+openai>=1.14
+
+# Evaluation
+ragas>=0.1
+
+# Already used in this sandbox demo (no install needed):
+# numpy, scikit-learn
+
+# Ops (optional, for observability parity with production bullets)
+prometheus-client>=0.20
