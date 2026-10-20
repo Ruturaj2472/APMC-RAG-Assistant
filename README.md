@@ -17,14 +17,14 @@ APMC (Agricultural Produce Market Committee) markets record every auction as a r
 ```mermaid
 flowchart LR
     Q[User question] --> F[Metadata filter extraction<br/>APMC / commodity / month / year]
-    F --> R[Hybrid retrieval]
-    subgraph R[Hybrid retrieval]
+    F --> HR
+    subgraph HR[Hybrid retrieval]
         direction TB
         B[BM25 lexical] --> M[Weighted fusion]
         E[Embedding similarity] --> M
         M --> K[Keyword-overlap rerank]
     end
-    R --> G[Generation<br/>grounded answer]
+    HR --> G[Generation<br/>grounded answer]
     G --> A[Answer + cited receipt numbers]
 ```
 
