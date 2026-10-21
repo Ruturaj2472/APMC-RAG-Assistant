@@ -10,7 +10,7 @@
 
 APMC (Agricultural Produce Market Committee) markets record every auction as a receipt: commodity, rate, weight, trader, date. Admins, traders and commission agents have to dig through those records by hand to answer simple questions such as *"What was the average onion rate at Manchar last month?"*. This project turns that receipt history into something you can query in natural language, with every answer traceable to source receipts.
 
-> **Note:** this is a portfolio project inspired by APMC auction-digitization work in agritech. It runs entirely on **synthetic data** (180 generated receipts). No real farmer, trader or transaction data is included.
+> **Note:** this is a portfolio project inspired by APMC auction-digitization work. It runs entirely on **synthetic data** (180 generated receipts). No real farmer, trader or transaction data is included.
 
 ## How it works
 
