@@ -11,15 +11,16 @@
   <img src="https://img.shields.io/badge/pattern-hybrid%20RAG-F0C35A" alt="Hybrid RAG">
   <img src="https://img.shields.io/badge/vector%20DB-Qdrant-DC244C" alt="Qdrant">
   <img src="https://img.shields.io/badge/embeddings-BGE%20%7C%20TF--IDF-6E40C9" alt="BGE or TF-IDF">
+  <img src="https://img.shields.io/badge/reranker-cross--encoder-8A2BE2" alt="Cross-encoder reranker">
   <img src="https://img.shields.io/badge/eval-RAGAS-0A7E8C" alt="RAGAS">
   <img src="https://img.shields.io/badge/LLM-OpenAI%20-412991?logo=openai&logoColor=white" alt="OpenAI optional">
 </p>
 
 <div align="center">
 
-| 🎯 Retrieval precision | 🧮 Exact aggregates | 🧾 RAGAS faithfulness | 🛑 No match |
-|:---:|:---:|:---:|:---:|
-| **1.0** on 15 test queries | **15 / 15** averages correct | **0.967** (LLM-judged) | abstains, no LLM call |
+| 🎯 Retrieval precision | 🔁 Paraphrase precision@5 | 🧮 Exact aggregates | 🧾 RAGAS faithfulness | 🛑 No match |
+|:---:|:---:|:---:|:---:|:---:|
+| **1.0** on 15 test queries | **0.725** with cross-encoder (was 0.40) | **15 / 15** averages correct | **0.967** (LLM-judged) | abstains, no LLM call |
 
 </div>
 
@@ -95,7 +96,7 @@ flowchart LR
         direction TB
         B[BM25 lexical] --> M[Weighted fusion]
         E[Vector search<br/>in memory or Qdrant] --> M
-        M --> K[Keyword-overlap rerank]
+        M --> K[Rerank top 20<br/>cross-encoder or keyword overlap]
     end
     S --> G[Generation<br/>grounded answer]
     HR --> G
@@ -105,7 +106,7 @@ flowchart LR
 1. **Filter extraction** pulls the APMC, commodity, month and year out of the question.
 2. **Metadata filtering** narrows the 180 receipts to the ones that match. If none match, the pipeline stops and says so.
 3. **Aggregate questions** ("average", "total", "how many", "highest", ...) get statistics computed in code over every matching receipt. The LLM only phrases the result; it never does the arithmetic.
-4. **Other questions** go through hybrid retrieval: BM25 (exact terms such as commodity names) and vector similarity (meaning) are fused and the top candidates reranked.
+4. **Other questions** go through hybrid retrieval: BM25 (exact terms such as commodity names) and vector similarity (meaning) are fused, and the top 20 candidates are reranked by a cross-encoder that reads the question and each receipt together (keyword overlap is the offline fallback).
 5. **Generation** writes the answer from that context only and returns the receipt numbers it used.
 
 Every swappable component uses the production tool when installed and configured, and otherwise a lightweight offline version, so the pipeline always runs:
@@ -115,6 +116,7 @@ Every swappable component uses the production tool when installed and configured
 | Embeddings | BGE (`BAAI/bge-small-en-v1.5`) or TF-IDF | BGE if `sentence-transformers` is installed, else TF-IDF | `EMBEDDINGS=bge` / `tfidf` |
 | Vector store | In memory or **Qdrant** (local in-process mode, or a server via `QDRANT_URL`) with payload filters | In memory | `VECTOR_STORE=qdrant` |
 | Lexical search | Hand-written BM25 (`src/bm25.py`) | | |
+| Reranker | Cross-encoder (`cross-encoder/ms-marco-MiniLM-L-6-v2`) or keyword overlap | Cross-encoder if `sentence-transformers` is installed, else keyword overlap | `RERANKER=cross-encoder` / `keyword` |
 | Generation | OpenAI chat model, or a deterministic template computed from the receipts | OpenAI if `OPENAI_API_KEY` is set | `OPENAI_MODEL` |
 | API | FastAPI | | |
 
@@ -157,23 +159,26 @@ Precision is perfect because metadata filtering does most of the work. Top-5 rec
 
 The evaluation above is dominated by metadata filters, so every embedder scores the same there. This benchmark uses 16 questions about fields the filters don't extract (commission agent, trader, payment mode, grade, village): 8 use the same words as the receipt text, 8 are paraphrases (e.g. *"deals settled electronically"* for Bank Transfer).
 
-| Setup | Exact-term precision@5 | Paraphrase precision@5 | Overall precision@5 | Paraphrase hit@1 |
-|---|---|---|---|---|
-| BM25 only | **1.0** | 0.40 | 0.700 | 0.25 |
-| BM25 + TF-IDF | 0.95 | 0.40 | 0.675 | 0.25 |
-| BM25 + BGE (in memory) | 0.925 | **0.525** | **0.725** | **0.375** |
-| BM25 + BGE (Qdrant) | 0.925 | **0.525** | **0.725** | **0.375** |
-| BGE only (Qdrant) | 0.90 | 0.525 | 0.713 | 0.375 |
+| Setup | Reranker | Exact-term precision@5 | Paraphrase precision@5 | Overall precision@5 | Paraphrase hit@1 |
+|---|---|---|---|---|---|
+| BM25 only | keyword | **1.0** | 0.40 | 0.700 | 0.25 |
+| BM25 + TF-IDF | keyword | 0.95 | 0.40 | 0.675 | 0.25 |
+| BM25 + BGE (in memory / Qdrant) | keyword | 0.925 | 0.525 | 0.725 | 0.375 |
+| BGE only (Qdrant) | keyword | 0.90 | 0.525 | 0.713 | 0.375 |
+| BM25 + TF-IDF | **cross-encoder** | **1.0** | 0.65 | 0.825 | 0.875 |
+| **BM25 + BGE (in memory / Qdrant)** | **cross-encoder** | **1.0** | **0.725** | **0.863** | **1.0** |
 
-- **BGE lifts paraphrase precision from 0.40 to 0.525** and puts a relevant receipt first 50% more often, at a small cost on exact-term questions, which keyword matching already handles. That trade-off is why retrieval is hybrid.
+- **The cross-encoder is the biggest single gain:** with BGE, paraphrase precision@5 rises from 0.525 to **0.725**, and the top receipt is relevant for **all 8** paraphrase questions (was 3 of 8). Exact-term precision also reaches 1.0.
+- The keyword-overlap reranker scores every candidate 0 when the question and receipt share no words (e.g. *"settled electronically"* vs "Bank Transfer"), so it can't fix the order; the cross-encoder reads the question and receipt together.
+- **BGE beats TF-IDF** on paraphrases with either reranker (0.525 vs 0.40, and 0.725 vs 0.65).
 - **Qdrant returns the same results as in-memory search** (verified by tests), with the APMC / commodity / date filters applied as Qdrant payload filters.
-- Paraphrase scores are still modest; the keyword-overlap reranker is the likely limit (see next steps).
+- The cross-encoder (trained on MS MARCO web search) was not tuned for receipt text; these gains are measured on this benchmark, not assumed.
 
 Full results: [`results/retrieval_comparison.json`](results/retrieval_comparison.json).
 
 ### LLM-judged faithfulness (`python -m src.evaluate_ragas`)
 
-RAGAS 0.4 `Faithfulness`: the share of claims in each generated answer that are supported by the context given to the LLM. Generation and judge: `gpt-4o-mini`.
+RAGAS 0.4 `Faithfulness`: the share of claims in each generated answer that are supported by the context given to the LLM. Generation and judge: `gpt-4o-mini`; retrieval with TF-IDF and the keyword-overlap reranker (run before the cross-encoder was added).
 
 | Metric | Value |
 |---|---|
@@ -212,7 +217,7 @@ uvicorn app:app --reload
 Optional production components:
 
 ```bash
-# BGE embeddings (downloads the ~130 MB model on first use)
+# BGE embeddings + cross-encoder reranker (downloads ~130 MB + ~90 MB of models on first use)
 pip install sentence-transformers
 
 # Qdrant: local in-process mode needs no server
@@ -235,7 +240,7 @@ Without an OpenAI key the offline template is used automatically.
 
 ## Testing and CI
 
-GitHub Actions (`.github/workflows/tests.yml`) runs on every push and pull request: it installs the demo requirements (including `qdrant-client`), runs the test suite, and runs the retrieval evaluation. The RAGAS evaluation is run manually because it calls OpenAI.
+GitHub Actions (`.github/workflows/tests.yml`) runs on every push and pull request: it installs the demo requirements (including `qdrant-client`), runs the test suite, and runs the retrieval evaluation. CI doesn't install `sentence-transformers`, so it tests the keyword-overlap fallback and skips the one cross-encoder test; that test and the benchmark above were run locally with the model installed. The RAGAS evaluation is run manually because it calls OpenAI.
 
 | Test | Checks |
 |---|---|
@@ -254,12 +259,17 @@ GitHub Actions (`.github/workflows/tests.yml`) runs on every push and pull reque
 | `test_qdrant_payload_filter_returns_only_matching_receipts` | Qdrant payload filters return exactly the matching receipts |
 | `test_qdrant_and_memory_retrieve_the_same_receipts` | Both vector stores retrieve the same receipts in the same order |
 | `test_qdrant_zero_match_filters_return_nothing` | The zero-match guarantee holds with Qdrant too |
+| `test_keyword_reranker_orders_by_term_overlap` | The keyword-overlap reranker ranks by shared terms |
+| `test_explicit_keyword_reranker` | `RERANKER=keyword` selects the keyword reranker |
+| `test_auto_falls_back_to_keyword_without_sentence_transformers` | Without `sentence-transformers`, the default falls back to keyword overlap |
+| `test_retriever_uses_the_given_reranker` | The retriever reranks at most the top 20 fused candidates with the configured reranker |
+| `test_cross_encoder_prefers_the_matching_receipt` | The cross-encoder ranks the receipt that answers the question first (skipped in CI) |
 
 ---
 
 ## Tech stack
 
-Python, FastAPI, Pydantic, Qdrant (`qdrant-client`), Sentence-Transformers (BGE), scikit-learn (TF-IDF), NumPy, OpenAI, RAGAS (with `langchain-openai` as the judge wrapper), pytest, GitHub Actions.
+Python, FastAPI, Pydantic, Qdrant (`qdrant-client`), Sentence-Transformers (BGE embeddings, cross-encoder reranker), scikit-learn (TF-IDF), NumPy, OpenAI, RAGAS (with `langchain-openai` as the judge wrapper), pytest, GitHub Actions.
 
 ---
 
@@ -273,14 +283,15 @@ data/receipts.json           180 generated receipts
 src/bm25.py                  lexical search
 src/embeddings.py            BGE or TF-IDF embeddings
 src/vector_store.py          in-memory or Qdrant vector store
-src/retriever.py             filter extraction, metadata filtering, hybrid retrieval, reranking
+src/reranker.py              cross-encoder or keyword-overlap reranker
+src/retriever.py             filter extraction, metadata filtering, hybrid retrieval
 src/llm_provider.py          generation (OpenAI or template fallback)
 src/pipeline.py              orchestration, exact aggregates, cited answers, zero-match abstain
 src/evaluate.py              retrieval + aggregate evaluation
 src/compare_retrieval.py     embeddings / vector store comparison
 src/evaluate_ragas.py        RAGAS faithfulness evaluation
 results/                     saved comparison and RAGAS results
-tests/                       pipeline, regression and Qdrant tests
+tests/                       pipeline, regression, Qdrant and reranker tests
 requirements-demo.txt        offline demo + tests
 requirements-eval.txt        RAGAS evaluation (pinned)
 .github/workflows/tests.yml  CI: tests + evaluation
@@ -290,7 +301,6 @@ requirements-eval.txt        RAGAS evaluation (pinned)
 
 ## What I'd do next
 
-- Replace the keyword-overlap reranker with a cross-encoder (e.g. `cross-encoder/ms-marco-MiniLM-L-6-v2`) and re-run the paraphrase benchmark, where the current reranker is the likely limit.
 - Extract filters with an LLM structured-output call instead of regex, so phrasings like "last month" or "Manchar market" are understood.
 - Evaluate on real (anonymised) receipt data, and use a stronger or repeated LLM judge to reduce RAGAS score variance.
 
