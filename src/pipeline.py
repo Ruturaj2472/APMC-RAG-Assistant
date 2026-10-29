@@ -18,6 +18,17 @@ class MarketIntelligencePipeline:
 
     def ask(self, query: str) -> dict:
         results, filters = self.retriever.retrieve(query, top_k=self.top_k)
+        if not results:
+            # Nothing matched the filters: answer without calling the LLM, so it
+            # can't fill the gap with receipts that don't match the question.
+            return {
+                "query": query,
+                "extracted_filters": filters,
+                "answer": self._no_match_answer(filters),
+                "cited_receipts": [],
+                "num_matched": 0,
+            }
+
         context_docs = [r["document"] for r in results]
         matched_receipts = [r["receipt"] for r in results]
 
@@ -33,3 +44,10 @@ class MarketIntelligencePipeline:
             "cited_receipts": [r["receipt_no"] for r in matched_receipts],
             "num_matched": len(matched_receipts),
         }
+
+    @staticmethod
+    def _no_match_answer(filters: dict) -> str:
+        if not filters:
+            return "No matching receipts were found for this query."
+        applied = ", ".join(f"{key}={value}" for key, value in filters.items())
+        return f"No matching receipts were found for {applied}."

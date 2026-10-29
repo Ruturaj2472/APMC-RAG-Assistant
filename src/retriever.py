@@ -75,7 +75,13 @@ class HybridRetriever:
         return filters
 
     def apply_metadata_filters(self, filters: dict):
-        """Return indices of receipts matching the extracted filters."""
+        """
+        Return indices of receipts matching the extracted filters.
+
+        No filters -> every receipt is a candidate. Filters that match nothing
+        -> empty list, so the pipeline can say so instead of answering from
+        unrelated receipts.
+        """
         indices = []
         for i, r in enumerate(self.receipts):
             if "apmc" in filters and r["apmc"] != filters["apmc"]:
@@ -89,7 +95,9 @@ class HybridRetriever:
                 if date_month != filters["month"]:
                     continue
             indices.append(i)
-        return indices if (filters and indices) else list(range(len(self.receipts)))
+        if not filters:
+            return list(range(len(self.receipts)))
+        return indices
 
     def rerank(self, query: str, candidate_indices: list[int], top_k: int):
         """Lightweight cross-encoder stand-in: rescore by exact term overlap."""
@@ -105,6 +113,8 @@ class HybridRetriever:
     def retrieve(self, query: str, top_k: int = 5, fusion_k: int = 20):
         filters = self.extract_filters(query)
         allowed_indices = set(self.apply_metadata_filters(filters))
+        if not allowed_indices:
+            return [], filters
 
         bm25_scores = self.bm25.get_scores(query)
         sem_scores = self.embedder.similarity_scores(query)
