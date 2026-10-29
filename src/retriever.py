@@ -7,24 +7,23 @@ Vector search runs either in memory or in Qdrant (see src/vector_store.py).
 With Qdrant, receipt vectors are stored with their metadata as payload and the
 extracted filters are applied as Qdrant payload filters.
 
-Production notes:
-  - The rerank step here is a lightweight keyword-overlap heuristic standing
-    in for a cross-encoder (e.g. `cross-encoder/ms-marco-MiniLM-L-6-v2`),
-    which would normally be used to rescore the top-k fused candidates.
+The top fused candidates are reranked by a keyword-overlap heuristic or a
+cross-encoder (see src/reranker.py).
 """
 import re
 from src.bm25 import BM25, tokenize
 from src.embeddings import get_embedder
 from src.vector_store import get_vector_store
+from src.reranker import get_reranker
 
 
 class HybridRetriever:
     def __init__(self, receipts: list[dict], documents: list[str], alpha: float = 0.5,
-                 embedder=None, vector_store=None):
+                 embedder=None, vector_store=None, reranker=None):
         """
         alpha: weight given to semantic score vs. BM25 score in fusion (0-1).
-        embedder / vector_store: defaults come from the EMBEDDINGS and
-        VECTOR_STORE environment variables.
+        embedder / vector_store / reranker: defaults come from the EMBEDDINGS,
+        VECTOR_STORE and RERANKER environment variables.
         """
         self.receipts = receipts
         self.documents = documents
@@ -36,6 +35,7 @@ class HybridRetriever:
         self.embedder = embedder or get_embedder()
         self.embedder.fit(documents)
         self.vector_store = vector_store or get_vector_store(self.embedder, documents, receipts)
+        self.reranker = reranker or get_reranker(documents)
 
     @staticmethod
     def _normalize(scores):
@@ -105,15 +105,7 @@ class HybridRetriever:
         return indices
 
     def rerank(self, query: str, candidate_indices: list[int], top_k: int):
-        """Lightweight cross-encoder stand-in: rescore by exact term overlap."""
-        query_terms = set(tokenize(query))
-        scored = []
-        for idx in candidate_indices:
-            doc_terms = set(tokenize(self.documents[idx]))
-            overlap = len(query_terms & doc_terms)
-            scored.append((overlap, idx))
-        scored.sort(key=lambda x: x[0], reverse=True)
-        return [idx for _, idx in scored[:top_k]]
+        return self.reranker.rerank(query, candidate_indices, top_k)
 
     def retrieve(self, query: str, top_k: int = 5, fusion_k: int = 20):
         filters = self.extract_filters(query)

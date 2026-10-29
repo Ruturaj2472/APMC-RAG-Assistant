@@ -12,9 +12,10 @@ grade mark, village), so ranking depends on BM25 and the embeddings:
 Metrics (top_k=5): precision@5 = share of the top 5 receipts that are relevant;
 hit@1 = share of questions whose top receipt is relevant.
 
-Setups: BM25 only, BM25 + TF-IDF, BM25 + BGE (in memory), BM25 + BGE (Qdrant),
-BGE only (Qdrant). BGE setups are skipped if sentence-transformers isn't
-installed; Qdrant setups if qdrant-client isn't installed.
+Setups: BM25 only, BM25 + TF-IDF, BM25 + BGE (in memory / Qdrant), BGE only
+(Qdrant), each with the keyword-overlap reranker, plus the same setups with a
+cross-encoder reranker. BGE and cross-encoder setups are skipped if
+sentence-transformers isn't installed; Qdrant setups if qdrant-client isn't.
 
     python -m src.compare_retrieval            # prints a table, writes results/retrieval_comparison.json
 """
@@ -23,6 +24,7 @@ import pathlib
 
 from data.generate_receipts import to_document
 from src.embeddings import BGEEmbedder, TfidfEmbedder
+from src.reranker import CrossEncoderReranker, KeywordOverlapReranker
 from src.retriever import HybridRetriever
 from src.vector_store import InMemoryVectorStore, QdrantVectorStore
 
@@ -51,26 +53,37 @@ QUESTIONS = [
 
 def build_setups(receipts, documents):
     """Yield (name, retriever) for every setup whose dependencies are installed."""
+    keyword = KeywordOverlapReranker(documents)
     tfidf = TfidfEmbedder()
+    tfidf_store = InMemoryVectorStore(tfidf)
     yield "BM25 only", HybridRetriever(receipts, documents, alpha=0.0, embedder=tfidf,
-                                       vector_store=InMemoryVectorStore(tfidf))
+                                       vector_store=tfidf_store, reranker=keyword)
     yield "BM25 + TF-IDF", HybridRetriever(receipts, documents, embedder=tfidf,
-                                           vector_store=InMemoryVectorStore(tfidf))
+                                           vector_store=tfidf_store, reranker=keyword)
     try:
         bge = BGEEmbedder().fit(documents)
+        cross = CrossEncoderReranker(documents)
     except ImportError:
-        print("[compare] sentence-transformers not installed - skipping BGE setups.")
+        print("[compare] sentence-transformers not installed - skipping BGE and cross-encoder setups.")
         return
+    bge_store = InMemoryVectorStore(bge)
+    yield "BM25 + TF-IDF + cross-encoder", HybridRetriever(receipts, documents, embedder=tfidf,
+                                                           vector_store=tfidf_store, reranker=cross)
     yield "BM25 + BGE (in memory)", HybridRetriever(receipts, documents, embedder=bge,
-                                                    vector_store=InMemoryVectorStore(bge))
+                                                    vector_store=bge_store, reranker=keyword)
+    yield "BM25 + BGE + cross-encoder (in memory)", HybridRetriever(receipts, documents, embedder=bge,
+                                                                    vector_store=bge_store, reranker=cross)
     try:
         qdrant = QdrantVectorStore(bge, documents, receipts)
     except ImportError:
         print("[compare] qdrant-client not installed - skipping Qdrant setups.")
         return
-    yield "BM25 + BGE (Qdrant)", HybridRetriever(receipts, documents, embedder=bge, vector_store=qdrant)
+    yield "BM25 + BGE (Qdrant)", HybridRetriever(receipts, documents, embedder=bge,
+                                                 vector_store=qdrant, reranker=keyword)
+    yield "BM25 + BGE + cross-encoder (Qdrant)", HybridRetriever(receipts, documents, embedder=bge,
+                                                                 vector_store=qdrant, reranker=cross)
     yield "BGE only (Qdrant)", HybridRetriever(receipts, documents, alpha=1.0, embedder=bge,
-                                               vector_store=qdrant)
+                                               vector_store=qdrant, reranker=keyword)
 
 
 def score(retriever, receipts):

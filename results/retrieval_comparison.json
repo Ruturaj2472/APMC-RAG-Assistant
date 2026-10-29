@@ -16,6 +16,13 @@
       "paraphrase_hit@1": 0.25,
       "overall_precision@5": 0.675
     },
+    "BM25 + TF-IDF + cross-encoder": {
+      "exact_term_precision@5": 1.0,
+      "exact_term_hit@1": 1.0,
+      "paraphrase_precision@5": 0.65,
+      "paraphrase_hit@1": 0.875,
+      "overall_precision@5": 0.825
+    },
     "BM25 + BGE (in memory)": {
       "exact_term_precision@5": 0.925,
       "exact_term_hit@1": 1.0,
@@ -23,12 +30,26 @@
       "paraphrase_hit@1": 0.375,
       "overall_precision@5": 0.725
     },
+    "BM25 + BGE + cross-encoder (in memory)": {
+      "exact_term_precision@5": 1.0,
+      "exact_term_hit@1": 1.0,
+      "paraphrase_precision@5": 0.725,
+      "paraphrase_hit@1": 1.0,
+      "overall_precision@5": 0.863
+    },
     "BM25 + BGE (Qdrant)": {
       "exact_term_precision@5": 0.925,
       "exact_term_hit@1": 1.0,
       "paraphrase_precision@5": 0.525,
       "paraphrase_hit@1": 0.375,
       "overall_precision@5": 0.725
+    },
+    "BM25 + BGE + cross-encoder (Qdrant)": {
+      "exact_term_precision@5": 1.0,
+      "exact_term_hit@1": 1.0,
+      "paraphrase_precision@5": 0.725,
+      "paraphrase_hit@1": 1.0,
+      "overall_precision@5": 0.863
     },
     "BGE only (Qdrant)": {
       "exact_term_precision@5": 0.9,
