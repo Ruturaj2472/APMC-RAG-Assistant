@@ -1,0 +1,84 @@
+{
+  "ragas_version": "0.4.3",
+  "generator_model": "gpt-4o-mini",
+  "judge_model": "gpt-4o-mini",
+  "questions": 13,
+  "scored": 10,
+  "mean_faithfulness": 0.967,
+  "abstained": [
+    {
+      "question": "What was the onion rate at Narayangaon APMC in June 2023?",
+      "answer": "No matching receipts were found for apmc=Narayangaon APMC, commodity=Onion, year=2023, month=06."
+    },
+    {
+      "question": "What was the average onion rate at Manchar in 2022?",
+      "answer": "No matching receipts were found for apmc=Manchar Krishi Utpanna Bazar Samiti, commodity=Onion, year=2022."
+    },
+    {
+      "question": "Show me potato trades at Junnar in 2021",
+      "answer": "No matching receipts were found for apmc=Junnar APMC, commodity=Potato, year=2021."
+    }
+  ],
+  "answers": [
+    {
+      "question": "What was the average onion rate at Manchar Krishi Utpanna Bazar Samiti?",
+      "answer": "The average onion rate at Manchar Krishi Utpanna Bazar Samiti was Rs. 98.56 per unit.",
+      "num_matched": 9,
+      "faithfulness": 1.0
+    },
+    {
+      "question": "What is the total transaction value for potato at Khed APMC?",
+      "answer": "The total transaction value for potato at Khed APMC is Rs. 24257.8.",
+      "num_matched": 12,
+      "faithfulness": 1.0
+    },
+    {
+      "question": "What was the average tomato rate at Junnar APMC in 2023?",
+      "answer": "The average tomato rate at Junnar APMC in 2023 was Rs. 107.78 per unit.",
+      "num_matched": 9,
+      "faithfulness": 1.0
+    },
+    {
+      "question": "What was the highest cauliflower rate at Narayangaon APMC?",
+      "answer": "The highest cauliflower rate at Narayangaon APMC was Rs. 88 per 10kg, recorded under receipt number 08704230125 on 2023-12-21.",
+      "num_matched": 9,
+      "faithfulness": 1.0
+    },
+    {
+      "question": "How many eggplant trades happened at Khed APMC?",
+      "answer": "There were 10 eggplant trades recorded at Khed APMC.",
+      "num_matched": 10,
+      "faithfulness": 1.0
+    },
+    {
+      "question": "What was the average potato rate in March?",
+      "answer": "The average potato rate in March was Rs. 76 per unit.",
+      "num_matched": 4,
+      "faithfulness": 1.0
+    },
+    {
+      "question": "Show me tomato trades in April",
+      "answer": "In April, the following tomato trades were recorded:\n\n1. **Receipt Number:** 08704230002\n   - **Date:** 2023-04-12\n   - **Market:** Narayangaon APMC\n   - **Commission Agent:** Bhairavnath Agro Traders\n   - **Trader:** Local Market\n   - **Mark:** Grade-B\n   - **Total Weight:** 642.0 kg\n   - **Rate:** Rs. 104 per 10kg\n   - **Total Amount:** Rs. 6676.8\n   - **Farmer:** Mahesh Dattu Chavan (Village 5)\n\n2. **Receipt Number:** 08704230080\n   - **Date:** 2023-04-27\n   - **Market:** Manchar Krishi Utpanna Bazar Samiti\n   - **Commission Agent:** Jhatka Vegetable Company\n   - **Trader:** Regional Wholesaler\n   - **Mark:** Loose\n   - **Total Weight:** 429.6 kg\n   - **Rate:** Rs. 120 per 10kg\n   - **Total Amount:** Rs. 5155.2\n   - **Farmer:** Ramesh Vitthal Pawar (Village 1)\n\n3. **Receipt Number:** 08704230005\n   - **Date:** 2023-04-30\n   - **Market:** Manchar Krishi Utpanna Bazar Samiti\n   - **Commission Agent:** Jhatka Vegetable Company\n   - **Trader:** Regional Wholesaler\n   - **Mark:** Grade-B\n   - **Total Weight:** 72.1 kg\n   - **Rate:** Rs. 138 per 10kg\n   - **Total Amount:** Rs. 994.98\n   - **Farmer:** Vijay Sopan Kale (Village 4)",
+      "num_matched": 3,
+      "faithfulness": 1.0
+    },
+    {
+      "question": "Which traders bought onion at Junnar APMC in May?",
+      "answer": "The trader that bought onion at Junnar APMC in May is Export House A, as recorded under receipt number 08704230081 on 2023-05-31.",
+      "num_matched": 1,
+      "faithfulness": 0.667
+    },
+    {
+      "question": "Show me cauliflower receipts at Manchar paid by bank transfer",
+      "answer": "The following cauliflower receipts at Manchar were paid by bank transfer:\n\n1. Receipt number 08704230142\n   - Date: 2023-07-10\n   - Commission agent: Bhairavnath Agro Traders\n   - Trader: BKC\n   - Mark: grade-B\n   - Total weight: 426.6kg\n   - Total amount: Rs. 2516.94\n   - Farmer: Ganesh Baban Shinde (Village 5)\n\n2. Receipt number 08704230103\n   - Date: 2023-07-01\n   - Commission agent: Bhairavnath Agro Traders\n   - Trader: BKC\n   - Mark: grade-B\n   - Total weight: 562.4kg\n   - Total amount: Rs. 4611.68\n   - Farmer: Vijay Sopan Kale (Village 5)\n\n3. Receipt number 08704230122\n   - Date: 2023-12-02\n   - Commission agent: Bhairavnath Agro Traders\n   - Trader: Local Market\n   - Mark: loose\n   - Total weight: 555.0kg\n   - Total amount: Rs. 3219.0\n   - Farmer: Ramesh Vitthal Pawar (Village 3)",
+      "num_matched": 5,
+      "faithfulness": 1.0
+    },
+    {
+      "question": "Trades handled by Shivshakti Traders",
+      "answer": "Shivshakti Traders handled the following trades:\n\n1. Receipt number 08704230020 - Potato on 2023-01-31 at Khed APMC.\n2. Receipt number 08704230177 - Eggplant on 2023-09-02 at Junnar APMC.\n3. Receipt number 08704230155 - Tomato on 2023-06-10 at Narayangaon APMC.\n4. Receipt number 08704230158 - Eggplant on 2023-10-15 at Khed APMC.\n5. Receipt number 08704230045 - Onion on 2023-08-03 at Khed APMC.",
+      "num_matched": 5,
+      "faithfulness": 1.0
+    }
+  ]
+}

@@ -45,7 +45,11 @@ class MarketIntelligencePipeline:
         self.llm = get_llm_provider()
         self.top_k = top_k
 
-    def ask(self, query: str) -> dict:
+    def ask(self, query: str, include_context: bool = False) -> dict:
+        """
+        Answer a question. include_context=True also returns the context
+        passed to the LLM (used by the RAGAS faithfulness evaluation).
+        """
         results, filters = self.retriever.retrieve(query, top_k=self.top_k)
         if not results:
             # Nothing matched the filters: answer without calling the LLM, so it
@@ -64,7 +68,7 @@ class MarketIntelligencePipeline:
             matched_receipts = [self.receipts[i] for i in indices]
             context_docs = [self.documents[i] for i in indices[:MAX_CONTEXT_DOCS]]
             stats = compute_statistics(matched_receipts)
-            context_docs.insert(0, self._statistics_line(stats))
+            context_docs.insert(0, self._statistics_line(stats, filters))
         else:
             matched_receipts = [r["receipt"] for r in results]
             context_docs = [r["document"] for r in results]
@@ -83,12 +87,15 @@ class MarketIntelligencePipeline:
         }
         if stats:
             response["statistics"] = stats
+        if include_context:
+            response["contexts"] = context_docs
         return response
 
     @staticmethod
-    def _statistics_line(stats: dict) -> str:
+    def _statistics_line(stats: dict, filters: dict) -> str:
+        scope = ", ".join(f"{key}={value}" for key, value in filters.items()) or "all receipts"
         return (
-            f"Computed over all {stats['receipts']} matching receipts: "
+            f"Computed over all {stats['receipts']} receipts matching {scope}: "
             f"average rate Rs. {stats['average_rate']} per unit "
             f"(range Rs. {stats['min_rate']}-{stats['max_rate']}), "
             f"total transaction value Rs. {stats['total_amount']}."

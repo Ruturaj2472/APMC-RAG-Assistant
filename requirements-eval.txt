@@ -1,0 +1,7 @@
+# LLM-judged evaluation (src/evaluate_ragas.py). Install on top of requirements-demo.txt.
+# Needs OPENAI_API_KEY. Versions pinned to a combination that works together.
+openai==2.54.0
+ragas==0.4.3
+langchain-core==0.3.86
+langchain-community==0.3.31
+langchain-openai==0.3.35

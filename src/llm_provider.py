@@ -4,6 +4,7 @@ LLM provider abstraction for the generation step.
 Production path (requires internet + `pip install openai` + OPENAI_API_KEY):
     OpenAIProvider -- calls gpt-4-turbo / gpt-3.5-turbo, both of which were
     widely available and production-grade throughout Jan-Aug 2024.
+    Override the model with the OPENAI_MODEL environment variable.
 
 Offline/demo fallback (used automatically if the `openai` package or an
 API key isn't available, e.g. in this sandbox):
@@ -17,10 +18,10 @@ import statistics
 
 
 class OpenAIProvider:
-    def __init__(self, model="gpt-4-turbo"):
+    def __init__(self, model=None):
         import openai  # noqa: local import, only required for production path
         self.client = openai.OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
-        self.model = model
+        self.model = model or os.environ.get("OPENAI_MODEL", "gpt-4-turbo")
 
     def answer(self, query: str, context_docs: list[str]) -> str:
         context = "\n".join(f"- {doc}" for doc in context_docs)
