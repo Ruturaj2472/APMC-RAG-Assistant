@@ -23,6 +23,7 @@ receipts, using only the top-k retrieved receipts vs. all filtered receipts.
 import json
 import statistics
 
+from src.filter_extractor import RegexFilterExtractor
 from src.retriever import HybridRetriever
 from src.pipeline import compute_statistics
 from data.generate_receipts import to_document
@@ -59,7 +60,7 @@ def evaluate(receipts_path="data/receipts.json", top_k=5):
     with open(receipts_path) as f:
         receipts = json.load(f)
     documents = [to_document(r) for r in receipts]
-    retriever = HybridRetriever(receipts, documents)
+    retriever = HybridRetriever(receipts, documents, filter_extractor=RegexFilterExtractor(receipts))
 
     test_cases = build_test_set(receipts)
     precisions, recalls = [], []

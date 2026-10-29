@@ -10,20 +10,21 @@ extracted filters are applied as Qdrant payload filters.
 The top fused candidates are reranked by a keyword-overlap heuristic or a
 cross-encoder (see src/reranker.py).
 """
-import re
 from src.bm25 import BM25, tokenize
 from src.embeddings import get_embedder
 from src.vector_store import get_vector_store
 from src.reranker import get_reranker
+from src.filter_extractor import get_filter_extractor
 
 
 class HybridRetriever:
     def __init__(self, receipts: list[dict], documents: list[str], alpha: float = 0.5,
-                 embedder=None, vector_store=None, reranker=None):
+                 embedder=None, vector_store=None, reranker=None, filter_extractor=None):
         """
         alpha: weight given to semantic score vs. BM25 score in fusion (0-1).
-        embedder / vector_store / reranker: defaults come from the EMBEDDINGS,
-        VECTOR_STORE and RERANKER environment variables.
+        embedder / vector_store / reranker / filter_extractor: defaults come from
+        the EMBEDDINGS, VECTOR_STORE, RERANKER and FILTER_EXTRACTOR environment
+        variables.
         """
         self.receipts = receipts
         self.documents = documents
@@ -36,6 +37,7 @@ class HybridRetriever:
         self.embedder.fit(documents)
         self.vector_store = vector_store or get_vector_store(self.embedder, documents, receipts)
         self.reranker = reranker or get_reranker(documents)
+        self.filter_extractor = filter_extractor or get_filter_extractor(receipts)
 
     @staticmethod
     def _normalize(scores):
@@ -45,39 +47,8 @@ class HybridRetriever:
         return [(s - lo) / (hi - lo) for s in scores]
 
     def extract_filters(self, query: str) -> dict:
-        """
-        Rule-based metadata extraction from the query (APMC name, commodity,
-        date range). In production this would typically be done via an LLM
-        function-calling / structured-output call (e.g. OpenAI function
-        calling) instead of regex matching.
-        """
-        filters = {}
-        q_lower = query.lower()
-
-        apmc_names = {r["apmc"].lower(): r["apmc"] for r in self.receipts}
-        for name_lower, name_original in apmc_names.items():
-            if name_lower.split()[0] in q_lower:  # match on first word, e.g. "manchar"
-                filters["apmc"] = name_original
-                break
-
-        commodities = {r["commodity"].lower() for r in self.receipts}
-        for commodity in commodities:
-            if commodity in q_lower:
-                filters["commodity"] = commodity.capitalize()
-                break
-
-        year_match = re.search(r"\b(20\d{2})\b", query)
-        if year_match:
-            filters["year"] = year_match.group(1)
-
-        month_names = ["january", "february", "march", "april", "may", "june",
-                       "july", "august", "september", "october", "november", "december"]
-        for idx, month in enumerate(month_names, start=1):
-            if month in q_lower:
-                filters["month"] = f"{idx:02d}"
-                break
-
-        return filters
+        """APMC / commodity / year / month filters (LLM or regex, see src/filter_extractor.py)."""
+        return self.filter_extractor.extract(query)
 
     def apply_metadata_filters(self, filters: dict):
         """

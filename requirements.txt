@@ -10,7 +10,7 @@ qdrant-client>=1.8
 sentence-transformers>=2.6
 
 # LLM provider
-openai>=1.14
+openai>=2.0  # chat.completions.parse for structured filter extraction
 
 # Evaluation: RAGAS needs specific LangChain versions, pinned in requirements-eval.txt
 

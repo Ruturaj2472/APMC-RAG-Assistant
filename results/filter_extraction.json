@@ -1,0 +1,328 @@
+{
+  "reference_date": "2023-12-31",
+  "accuracy": {
+    "regex": "3/12",
+    "llm": "12/12"
+  },
+  "llm_model": "gpt-4o-mini",
+  "results": {
+    "regex": [
+      {
+        "question": "What was the average onion rate at Manchar Krishi Utpanna Bazar Samiti?",
+        "expected": {
+          "apmc": "Manchar Krishi Utpanna Bazar Samiti",
+          "commodity": "Onion"
+        },
+        "got": {
+          "apmc": "Manchar Krishi Utpanna Bazar Samiti",
+          "commodity": "Onion"
+        },
+        "correct": true
+      },
+      {
+        "question": "Tomato rates at the Manchar market",
+        "expected": {
+          "apmc": "Manchar Krishi Utpanna Bazar Samiti",
+          "commodity": "Tomato"
+        },
+        "got": {
+          "apmc": "Manchar Krishi Utpanna Bazar Samiti",
+          "commodity": "Tomato"
+        },
+        "correct": true
+      },
+      {
+        "question": "Brinjal prices at Khed",
+        "expected": {
+          "apmc": "Khed APMC",
+          "commodity": "Eggplant"
+        },
+        "got": {
+          "apmc": "Khed APMC"
+        },
+        "correct": false
+      },
+      {
+        "question": "How did kanda sell at Junnar last month?",
+        "expected": {
+          "apmc": "Junnar APMC",
+          "commodity": "Onion",
+          "year": "2023",
+          "month": "11"
+        },
+        "got": {
+          "apmc": "Junnar APMC"
+        },
+        "correct": false
+      },
+      {
+        "question": "Aloo trades at Narayangaon in March 2023",
+        "expected": {
+          "apmc": "Narayangaon APMC",
+          "commodity": "Potato",
+          "year": "2023",
+          "month": "03"
+        },
+        "got": {
+          "apmc": "Narayangaon APMC",
+          "year": "2023",
+          "month": "03"
+        },
+        "correct": false
+      },
+      {
+        "question": "Show me gobi trades in Junnar in April 2023",
+        "expected": {
+          "apmc": "Junnar APMC",
+          "commodity": "Cauliflower",
+          "year": "2023",
+          "month": "04"
+        },
+        "got": {
+          "apmc": "Junnar APMC",
+          "year": "2023",
+          "month": "04"
+        },
+        "correct": false
+      },
+      {
+        "question": "Eggplant at Narayangaon in Dec 2023",
+        "expected": {
+          "apmc": "Narayangaon APMC",
+          "commodity": "Eggplant",
+          "year": "2023",
+          "month": "12"
+        },
+        "got": {
+          "apmc": "Narayangaon APMC",
+          "commodity": "Eggplant",
+          "year": "2023"
+        },
+        "correct": false
+      },
+      {
+        "question": "May I see tomato trades at Khed?",
+        "expected": {
+          "apmc": "Khed APMC",
+          "commodity": "Tomato"
+        },
+        "got": {
+          "apmc": "Khed APMC",
+          "commodity": "Tomato",
+          "month": "05"
+        },
+        "correct": false
+      },
+      {
+        "question": "Onion rates at Junnar this month",
+        "expected": {
+          "apmc": "Junnar APMC",
+          "commodity": "Onion",
+          "year": "2023",
+          "month": "12"
+        },
+        "got": {
+          "apmc": "Junnar APMC",
+          "commodity": "Onion"
+        },
+        "correct": false
+      },
+      {
+        "question": "Potato trades last year",
+        "expected": {
+          "commodity": "Potato",
+          "year": "2022"
+        },
+        "got": {
+          "commodity": "Potato"
+        },
+        "correct": false
+      },
+      {
+        "question": "Trades handled by Shivshakti Traders",
+        "expected": {},
+        "got": {},
+        "correct": true
+      },
+      {
+        "question": "What was the onion rate at Narayangaon in the first month of 2023?",
+        "expected": {
+          "apmc": "Narayangaon APMC",
+          "commodity": "Onion",
+          "year": "2023",
+          "month": "01"
+        },
+        "got": {
+          "apmc": "Narayangaon APMC",
+          "commodity": "Onion",
+          "year": "2023"
+        },
+        "correct": false
+      }
+    ],
+    "llm": [
+      {
+        "question": "What was the average onion rate at Manchar Krishi Utpanna Bazar Samiti?",
+        "expected": {
+          "apmc": "Manchar Krishi Utpanna Bazar Samiti",
+          "commodity": "Onion"
+        },
+        "got": {
+          "apmc": "Manchar Krishi Utpanna Bazar Samiti",
+          "commodity": "Onion"
+        },
+        "correct": true
+      },
+      {
+        "question": "Tomato rates at the Manchar market",
+        "expected": {
+          "apmc": "Manchar Krishi Utpanna Bazar Samiti",
+          "commodity": "Tomato"
+        },
+        "got": {
+          "apmc": "Manchar Krishi Utpanna Bazar Samiti",
+          "commodity": "Tomato"
+        },
+        "correct": true
+      },
+      {
+        "question": "Brinjal prices at Khed",
+        "expected": {
+          "apmc": "Khed APMC",
+          "commodity": "Eggplant"
+        },
+        "got": {
+          "apmc": "Khed APMC",
+          "commodity": "Eggplant"
+        },
+        "correct": true
+      },
+      {
+        "question": "How did kanda sell at Junnar last month?",
+        "expected": {
+          "apmc": "Junnar APMC",
+          "commodity": "Onion",
+          "year": "2023",
+          "month": "11"
+        },
+        "got": {
+          "apmc": "Junnar APMC",
+          "commodity": "Onion",
+          "year": "2023",
+          "month": "11"
+        },
+        "correct": true
+      },
+      {
+        "question": "Aloo trades at Narayangaon in March 2023",
+        "expected": {
+          "apmc": "Narayangaon APMC",
+          "commodity": "Potato",
+          "year": "2023",
+          "month": "03"
+        },
+        "got": {
+          "apmc": "Narayangaon APMC",
+          "commodity": "Potato",
+          "year": "2023",
+          "month": "03"
+        },
+        "correct": true
+      },
+      {
+        "question": "Show me gobi trades in Junnar in April 2023",
+        "expected": {
+          "apmc": "Junnar APMC",
+          "commodity": "Cauliflower",
+          "year": "2023",
+          "month": "04"
+        },
+        "got": {
+          "apmc": "Junnar APMC",
+          "commodity": "Cauliflower",
+          "year": "2023",
+          "month": "04"
+        },
+        "correct": true
+      },
+      {
+        "question": "Eggplant at Narayangaon in Dec 2023",
+        "expected": {
+          "apmc": "Narayangaon APMC",
+          "commodity": "Eggplant",
+          "year": "2023",
+          "month": "12"
+        },
+        "got": {
+          "apmc": "Narayangaon APMC",
+          "commodity": "Eggplant",
+          "year": "2023",
+          "month": "12"
+        },
+        "correct": true
+      },
+      {
+        "question": "May I see tomato trades at Khed?",
+        "expected": {
+          "apmc": "Khed APMC",
+          "commodity": "Tomato"
+        },
+        "got": {
+          "apmc": "Khed APMC",
+          "commodity": "Tomato"
+        },
+        "correct": true
+      },
+      {
+        "question": "Onion rates at Junnar this month",
+        "expected": {
+          "apmc": "Junnar APMC",
+          "commodity": "Onion",
+          "year": "2023",
+          "month": "12"
+        },
+        "got": {
+          "apmc": "Junnar APMC",
+          "commodity": "Onion",
+          "year": "2023",
+          "month": "12"
+        },
+        "correct": true
+      },
+      {
+        "question": "Potato trades last year",
+        "expected": {
+          "commodity": "Potato",
+          "year": "2022"
+        },
+        "got": {
+          "commodity": "Potato",
+          "year": "2022"
+        },
+        "correct": true
+      },
+      {
+        "question": "Trades handled by Shivshakti Traders",
+        "expected": {},
+        "got": {},
+        "correct": true
+      },
+      {
+        "question": "What was the onion rate at Narayangaon in the first month of 2023?",
+        "expected": {
+          "apmc": "Narayangaon APMC",
+          "commodity": "Onion",
+          "year": "2023",
+          "month": "01"
+        },
+        "got": {
+          "apmc": "Narayangaon APMC",
+          "commodity": "Onion",
+          "year": "2023",
+          "month": "01"
+        },
+        "correct": true
+      }
+    ]
+  }
+}
