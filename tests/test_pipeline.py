@@ -76,3 +76,37 @@ def test_filtered_results_match_every_filter():
         assert receipt["commodity"] == "Onion"
         assert receipt["apmc"].startswith("Manchar")
         assert receipt["date"].startswith("2023-03")
+
+
+# Aggregate questions use every receipt that matches the filters.
+
+def _true_stats(pipeline, apmc_prefix, commodity):
+    matching = [r for r in pipeline.receipts
+                if r["apmc"].startswith(apmc_prefix) and r["commodity"] == commodity]
+    rates = [r["rate_per_unit"] for r in matching]
+    return matching, round(sum(rates) / len(rates), 2), round(sum(r["amount"] for r in matching), 2)
+
+
+def test_average_question_uses_all_filtered_receipts():
+    pipeline = MarketIntelligencePipeline()
+    matching, true_avg, _ = _true_stats(pipeline, "Manchar", "Onion")
+    assert len(matching) > pipeline.top_k
+    result = pipeline.ask("What was the average onion rate at Manchar?")
+    assert result["num_matched"] == len(matching)
+    assert result["statistics"]["average_rate"] == true_avg
+    assert f"Rs. {true_avg}" in result["answer"]
+
+
+def test_total_question_matches_the_data():
+    pipeline = MarketIntelligencePipeline()
+    matching, _, true_total = _true_stats(pipeline, "Khed", "Potato")
+    result = pipeline.ask("What is the total transaction value for potato at Khed?")
+    assert result["statistics"]["receipts"] == len(matching)
+    assert result["statistics"]["total_amount"] == true_total
+
+
+def test_non_aggregate_question_keeps_top_k():
+    pipeline = MarketIntelligencePipeline()
+    result = pipeline.ask("Show me onion trades at Manchar")
+    assert "statistics" not in result
+    assert result["num_matched"] <= pipeline.top_k
