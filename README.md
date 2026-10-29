@@ -2,6 +2,7 @@
 
 **Ask plain-English questions about agricultural auction data and get answers cited to the exact receipts they came from.**
 
+[![Tests](https://github.com/Ruturaj2472/APMC-RAG-Assistant/actions/workflows/tests.yml/badge.svg)](https://github.com/Ruturaj2472/APMC-RAG-Assistant/actions/workflows/tests.yml)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![FastAPI](https://img.shields.io/badge/API-FastAPI-009688)
 ![RAG](https://img.shields.io/badge/pattern-hybrid%20RAG-F0C35A)
