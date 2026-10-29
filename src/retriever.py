@@ -3,11 +3,11 @@ Hybrid retrieval over APMC receipts: combines lexical (BM25) and semantic
 (embedding cosine similarity) scores, applies metadata filters extracted
 from the query, and reranks the fused candidate set.
 
+Vector search runs either in memory or in Qdrant (see src/vector_store.py).
+With Qdrant, receipt vectors are stored with their metadata as payload and the
+extracted filters are applied as Qdrant payload filters.
+
 Production notes:
-  - Vector storage here is in-memory. In production this maps directly onto
-    Qdrant (or ChromaDB): store `doc_embeddings` as vectors with payload =
-    the receipt's metadata fields, and use Qdrant's payload filters instead
-    of the manual `apply_metadata_filters` function below.
   - The rerank step here is a lightweight keyword-overlap heuristic standing
     in for a cross-encoder (e.g. `cross-encoder/ms-marco-MiniLM-L-6-v2`),
     which would normally be used to rescore the top-k fused candidates.
@@ -15,12 +15,16 @@ Production notes:
 import re
 from src.bm25 import BM25, tokenize
 from src.embeddings import get_embedder
+from src.vector_store import get_vector_store
 
 
 class HybridRetriever:
-    def __init__(self, receipts: list[dict], documents: list[str], alpha: float = 0.5):
+    def __init__(self, receipts: list[dict], documents: list[str], alpha: float = 0.5,
+                 embedder=None, vector_store=None):
         """
         alpha: weight given to semantic score vs. BM25 score in fusion (0-1).
+        embedder / vector_store: defaults come from the EMBEDDINGS and
+        VECTOR_STORE environment variables.
         """
         self.receipts = receipts
         self.documents = documents
@@ -29,8 +33,9 @@ class HybridRetriever:
         tokenized_docs = [tokenize(doc) for doc in documents]
         self.bm25 = BM25(tokenized_docs)
 
-        self.embedder = get_embedder()
+        self.embedder = embedder or get_embedder()
         self.embedder.fit(documents)
+        self.vector_store = vector_store or get_vector_store(self.embedder, documents, receipts)
 
     @staticmethod
     def _normalize(scores):
@@ -117,16 +122,20 @@ class HybridRetriever:
             return [], filters
 
         bm25_scores = self.bm25.get_scores(query)
-        sem_scores = self.embedder.similarity_scores(query)
-
         bm25_norm = self._normalize(bm25_scores)
-        sem_norm = self._normalize(list(sem_scores))
+
+        # Semantic scores are normalized over the filtered candidates only, so
+        # in-memory and Qdrant search rank the same receipts the same way.
+        sem_scores = {i: s for i, s in self.vector_store.scores(query, filters).items()
+                      if i in allowed_indices}
+        sem_ids = list(sem_scores)
+        sem_norm = dict(zip(sem_ids, self._normalize([sem_scores[i] for i in sem_ids])))
 
         fused = []
         for i in range(len(self.documents)):
             if i not in allowed_indices:
                 continue
-            score = self.alpha * sem_norm[i] + (1 - self.alpha) * bm25_norm[i]
+            score = self.alpha * sem_norm.get(i, 0.0) + (1 - self.alpha) * bm25_norm[i]
             fused.append((score, i))
 
         fused.sort(key=lambda x: x[0], reverse=True)

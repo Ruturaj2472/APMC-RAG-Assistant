@@ -7,15 +7,25 @@ Production path (requires internet + `pip install sentence-transformers`):
 Offline/demo fallback (used automatically if sentence-transformers isn't
 installed, e.g. in this sandbox):
     TfidfEmbedder -- scikit-learn TF-IDF vectors + cosine similarity.
-    Same interface (`fit`, `embed`), so swapping providers requires no
-    changes anywhere else in the pipeline.
+
+Both share the same interface (`fit`, `similarity_scores`, `embed`), so
+swapping providers requires no changes anywhere else in the pipeline.
+`embed` returns dense, L2-normalized vectors, which is what a vector database
+such as Qdrant stores.
+
+Choose explicitly with the EMBEDDINGS environment variable: `bge`, `tfidf`,
+or `auto` (default: BGE if installed, else TF-IDF).
 """
+import os
+
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 
 class TfidfEmbedder:
     """Fallback embedder - no internet/model download required."""
+
+    name = "tfidf"
 
     def __init__(self):
         self.vectorizer = TfidfVectorizer()
@@ -30,6 +40,10 @@ class TfidfEmbedder:
         sims = cosine_similarity(query_vec, self.doc_matrix)[0]
         return sims
 
+    def embed(self, texts):
+        # TfidfVectorizer rows are already L2-normalized
+        return self.vectorizer.transform(texts).toarray()
+
 
 class BGEEmbedder:
     """
@@ -37,6 +51,8 @@ class BGEEmbedder:
     Only imports the heavy dependency if actually instantiated, so the rest
     of the codebase works even when sentence-transformers isn't installed.
     """
+
+    name = "bge"
 
     def __init__(self, model_name="BAAI/bge-small-en-v1.5"):
         from sentence_transformers import SentenceTransformer  # noqa: local import
@@ -54,9 +70,20 @@ class BGEEmbedder:
         q_emb = self.model.encode([query], normalize_embeddings=True)[0]
         return self.doc_embeddings @ q_emb
 
+    def embed(self, texts):
+        return self.model.encode(list(texts), normalize_embeddings=True)
 
-def get_embedder():
-    """Return the best available embedder: BGE if installed, else TF-IDF fallback."""
+
+def get_embedder(name: str | None = None):
+    """
+    Return the requested embedder ("bge", "tfidf" or "auto").
+    "auto" (the default) uses BGE if installed, else the TF-IDF fallback.
+    """
+    name = (name or os.environ.get("EMBEDDINGS", "auto")).lower()
+    if name == "tfidf":
+        return TfidfEmbedder()
+    if name == "bge":
+        return BGEEmbedder()
     try:
         return BGEEmbedder()
     except ImportError:

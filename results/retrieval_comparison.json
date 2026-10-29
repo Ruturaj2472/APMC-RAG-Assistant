@@ -1,0 +1,41 @@
+{
+  "top_k": 5,
+  "questions": 16,
+  "results": {
+    "BM25 only": {
+      "exact_term_precision@5": 1.0,
+      "exact_term_hit@1": 1.0,
+      "paraphrase_precision@5": 0.4,
+      "paraphrase_hit@1": 0.25,
+      "overall_precision@5": 0.7
+    },
+    "BM25 + TF-IDF": {
+      "exact_term_precision@5": 0.95,
+      "exact_term_hit@1": 1.0,
+      "paraphrase_precision@5": 0.4,
+      "paraphrase_hit@1": 0.25,
+      "overall_precision@5": 0.675
+    },
+    "BM25 + BGE (in memory)": {
+      "exact_term_precision@5": 0.925,
+      "exact_term_hit@1": 1.0,
+      "paraphrase_precision@5": 0.525,
+      "paraphrase_hit@1": 0.375,
+      "overall_precision@5": 0.725
+    },
+    "BM25 + BGE (Qdrant)": {
+      "exact_term_precision@5": 0.925,
+      "exact_term_hit@1": 1.0,
+      "paraphrase_precision@5": 0.525,
+      "paraphrase_hit@1": 0.375,
+      "overall_precision@5": 0.725
+    },
+    "BGE only (Qdrant)": {
+      "exact_term_precision@5": 0.9,
+      "exact_term_hit@1": 1.0,
+      "paraphrase_precision@5": 0.525,
+      "paraphrase_hit@1": 0.375,
+      "overall_precision@5": 0.713
+    }
+  }
+}
