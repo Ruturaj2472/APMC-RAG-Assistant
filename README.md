@@ -12,7 +12,7 @@
   <img src="https://img.shields.io/badge/vector%20DB-Qdrant-DC244C" alt="Qdrant">
   <img src="https://img.shields.io/badge/embeddings-BGE%20%7C%20TF--IDF-6E40C9" alt="BGE or TF-IDF">
   <img src="https://img.shields.io/badge/eval-RAGAS-0A7E8C" alt="RAGAS">
-  <img src="https://img.shields.io/badge/LLM-OpenAI%20(optional)-412991?logo=openai&logoColor=white" alt="OpenAI optional">
+  <img src="https://img.shields.io/badge/LLM-OpenAI%20-412991?logo=openai&logoColor=white" alt="OpenAI optional">
 </p>
 
 <div align="center">
