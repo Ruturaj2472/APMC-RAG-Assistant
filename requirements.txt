@@ -12,8 +12,7 @@ sentence-transformers>=2.6
 # LLM provider
 openai>=1.14
 
-# Evaluation
-ragas>=0.1
+# Evaluation: RAGAS needs specific LangChain versions, pinned in requirements-eval.txt
 
 # Already used in this sandbox demo (no install needed):
 # numpy, scikit-learn
