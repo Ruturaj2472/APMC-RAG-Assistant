@@ -14,13 +14,14 @@
   <img src="https://img.shields.io/badge/reranker-cross--encoder-8A2BE2" alt="Cross-encoder reranker">
   <img src="https://img.shields.io/badge/eval-RAGAS-0A7E8C" alt="RAGAS">
   <img src="https://img.shields.io/badge/LLM-OpenAI%20-412991?logo=openai&logoColor=white" alt="OpenAI optional">
+  <img src="https://img.shields.io/badge/filters-LLM%20structured%20output-10A37F" alt="LLM structured-output filters">
 </p>
 
 <div align="center">
 
-| 🎯 Retrieval precision | 🔁 Paraphrase precision@5 | 🧮 Exact aggregates | 🧾 RAGAS faithfulness | 🛑 No match |
-|:---:|:---:|:---:|:---:|:---:|
-| **1.0** on 15 test queries | **0.725** with cross-encoder (was 0.40) | **15 / 15** averages correct | **0.967** (LLM-judged) | abstains, no LLM call |
+| 🎯 Retrieval precision | 🗣️ Filter extraction | 🔁 Paraphrase precision@5 | 🧮 Exact aggregates | 🧾 RAGAS faithfulness | 🛑 No match |
+|:---:|:---:|:---:|:---:|:---:|:---:|
+| **1.0** on 15 test queries | **12 / 12** informal phrasings (regex 3 / 12) | **0.725** with cross-encoder (was 0.40) | **15 / 15** averages correct | **0.967** (LLM-judged) | abstains, no LLM call |
 
 </div>
 
@@ -80,13 +81,25 @@ This project turns that receipt history into something you can query in natural 
 
 Both outputs come straight from `pipeline.ask(...)` in offline mode.
 
+**Informal phrasing**, with the LLM filter extractor (`REFERENCE_DATE=2023-12-31`). *Kanda* is the local name for onion, and "last month" is resolved to November 2023; the regex extractor would have searched every commodity and every month:
+
+```json
+{
+  "query": "How did kanda sell at Junnar last month?",
+  "extracted_filters": { "apmc": "Junnar APMC", "commodity": "Onion", "year": "2023", "month": "11" },
+  "answer": "Based on 1 matching receipt(s) for Onion at Junnar APMC: average rate was Rs. 60 per unit (range: Rs. 60-60), total transaction value Rs. 960.0. Source receipts: 08704230028.",
+  "cited_receipts": ["08704230028"],
+  "num_matched": 1
+}
+```
+
 ---
 
 ## How it works
 
 ```mermaid
 flowchart LR
-    Q[User question] --> F[Metadata filter extraction<br/>APMC / commodity / month / year]
+    Q[User question] --> F[Filter extraction<br/>LLM structured output or regex<br/>APMC / commodity / month / year]
     F --> C{Any receipts<br/>match the filters?}
     C -- no --> N[No matching receipts<br/>no LLM call]
     C -- yes --> T{Aggregate question?<br/>average / total / how many}
@@ -103,7 +116,7 @@ flowchart LR
     G --> A[Answer + cited receipt numbers]
 ```
 
-1. **Filter extraction** pulls the APMC, commodity, month and year out of the question.
+1. **Filter extraction** pulls the APMC, commodity, month and year out of the question with one OpenAI structured-output call. The APMC and commodity can only be values that exist in the data, local names are mapped (*kanda* → Onion, *brinjal* → Eggplant), and relative dates ("last month") are resolved. Without an API key, or if the call fails, a regex extractor is used instead.
 2. **Metadata filtering** narrows the 180 receipts to the ones that match. If none match, the pipeline stops and says so.
 3. **Aggregate questions** ("average", "total", "how many", "highest", ...) get statistics computed in code over every matching receipt. The LLM only phrases the result; it never does the arithmetic.
 4. **Other questions** go through hybrid retrieval: BM25 (exact terms such as commodity names) and vector similarity (meaning) are fused, and the top 20 candidates are reranked by a cross-encoder that reads the question and each receipt together (keyword overlap is the offline fallback).
@@ -115,6 +128,7 @@ Every swappable component uses the production tool when installed and configured
 |---|---|---|---|
 | Embeddings | BGE (`BAAI/bge-small-en-v1.5`) or TF-IDF | BGE if `sentence-transformers` is installed, else TF-IDF | `EMBEDDINGS=bge` / `tfidf` |
 | Vector store | In memory or **Qdrant** (local in-process mode, or a server via `QDRANT_URL`) with payload filters | In memory | `VECTOR_STORE=qdrant` |
+| Filter extraction | OpenAI structured output (`gpt-4o-mini`) or regex | LLM if `OPENAI_API_KEY` is set, else regex | `FILTER_EXTRACTOR=llm` / `regex`, `OPENAI_FILTER_MODEL`, `REFERENCE_DATE` |
 | Lexical search | Hand-written BM25 (`src/bm25.py`) | | |
 | Reranker | Cross-encoder (`cross-encoder/ms-marco-MiniLM-L-6-v2`) or keyword overlap | Cross-encoder if `sentence-transformers` is installed, else keyword overlap | `RERANKER=cross-encoder` / `keyword` |
 | Generation | OpenAI chat model, or a deterministic template computed from the receipts | OpenAI if `OPENAI_API_KEY` is set | `OPENAI_MODEL` |
@@ -126,6 +140,7 @@ Every swappable component uses the production tool when installed and configured
 
 | Safeguard | How |
 |---|---|
+| **Filters limited to real values** | The LLM filter extractor can only return markets and commodities that exist in the data (enforced by the structured-output schema), and leaves fields empty instead of guessing. |
 | **Cited answers** | Every response returns `cited_receipts`, so each number can be traced back to source records. |
 | **Exact aggregates** | Averages, totals, ranges and counts are computed in code over every receipt matching the filters and passed to the LLM as a statistics line. The LLM doesn't do arithmetic. |
 | **Abstains on zero matches** | When the filters match no receipt, retrieval returns nothing and the pipeline answers *"No matching receipts were found for ..."* without calling the LLM. It never falls back to unrelated receipts. |
@@ -176,9 +191,25 @@ The evaluation above is dominated by metadata filters, so every embedder scores 
 
 Full results: [`results/retrieval_comparison.json`](results/retrieval_comparison.json).
 
+### Filter extraction (`python -m src.compare_filters`)
+
+12 questions with informal phrasing, scored as correct only when the extracted filters exactly match the expected ones (relative dates resolved against 2023-12-31). LLM: `gpt-4o-mini` with structured output.
+
+| Phrasing | Example | Regex | LLM |
+|---|---|---|---|
+| Full or short market names | "Tomato rates at the Manchar market" | ✅ | ✅ |
+| Local commodity names | "Brinjal prices at Khed", "aloo", "gobi" | ❌ commodity missed | ✅ |
+| Relative dates | "last month", "this month", "last year" | ❌ date missed | ✅ |
+| Descriptive dates | "Dec 2023", "the first month of 2023" | ❌ month missed | ✅ |
+| "May" as a word | "May I see tomato trades at Khed?" | ❌ adds month = May | ✅ |
+| No filters at all | "Trades handled by Shivshakti Traders" | ✅ | ✅ |
+| **Exact match** | | **3 / 12** | **12 / 12** |
+
+A missed filter widens the question (all commodities or all months) and an extra one narrows it, so each regex miss is a wrong answer, not just a less precise one. Full per-question results: [`results/filter_extraction.json`](results/filter_extraction.json).
+
 ### LLM-judged faithfulness (`python -m src.evaluate_ragas`)
 
-RAGAS 0.4 `Faithfulness`: the share of claims in each generated answer that are supported by the context given to the LLM. Generation and judge: `gpt-4o-mini`; retrieval with TF-IDF and the keyword-overlap reranker (run before the cross-encoder was added).
+RAGAS 0.4 `Faithfulness`: the share of claims in each generated answer that are supported by the context given to the LLM. Generation and judge: `gpt-4o-mini`; retrieval with TF-IDF, the keyword-overlap reranker and regex filters (run before the cross-encoder and LLM filters were added).
 
 | Metric | Value |
 |---|---|
@@ -203,6 +234,7 @@ pip install -r requirements-demo.txt
 python demo_cli.py               # run sample queries end to end
 python -m src.evaluate           # retrieval + aggregate evaluation
 python -m src.compare_retrieval  # embeddings / vector store comparison
+python -m src.compare_filters    # regex vs LLM filter extraction (LLM part needs OPENAI_API_KEY)
 python -m pytest tests -v        # run the tests
 ```
 
@@ -234,13 +266,13 @@ pip install -r requirements-eval.txt
 python -m src.evaluate_ragas
 ```
 
-Without an OpenAI key the offline template is used automatically.
+With `OPENAI_API_KEY` set, filters are extracted by the LLM too; set `REFERENCE_DATE=2023-12-31` to resolve "last month" against the end of the synthetic data. Without a key, the offline template and the regex extractor are used automatically.
 
 ---
 
 ## Testing and CI
 
-GitHub Actions (`.github/workflows/tests.yml`) runs on every push and pull request: it installs the demo requirements (including `qdrant-client`), runs the test suite, and runs the retrieval evaluation. CI doesn't install `sentence-transformers`, so it tests the keyword-overlap fallback and skips the one cross-encoder test; that test and the benchmark above were run locally with the model installed. The RAGAS evaluation is run manually because it calls OpenAI.
+GitHub Actions (`.github/workflows/tests.yml`) runs on every push and pull request: it installs the demo requirements (including `qdrant-client`), runs the test suite, and runs the retrieval evaluation. CI doesn't install `sentence-transformers`, so it tests the keyword-overlap fallback and skips the one cross-encoder test; that test and the benchmark above were run locally with the model installed. Tests never call OpenAI: `tests/conftest.py` removes any API key, and the LLM filter extractor is tested with a fake OpenAI client. The RAGAS evaluation and the LLM half of the filter benchmark are run manually because they call OpenAI.
 
 | Test | Checks |
 |---|---|
@@ -264,12 +296,22 @@ GitHub Actions (`.github/workflows/tests.yml`) runs on every push and pull reque
 | `test_auto_falls_back_to_keyword_without_sentence_transformers` | Without `sentence-transformers`, the default falls back to keyword overlap |
 | `test_retriever_uses_the_given_reranker` | The retriever reranks at most the top 20 fused candidates with the configured reranker |
 | `test_cross_encoder_prefers_the_matching_receipt` | The cross-encoder ranks the receipt that answers the question first (skipped in CI) |
+| `test_regex_extractor` | The regex extractor finds APMC, commodity, year and month |
+| `test_llm_extractor_returns_canonical_filters` | The LLM extractor returns filters in the receipt fields' format |
+| `test_prompt_contains_reference_date_for_relative_dates` | The reference date is sent so relative dates can be resolved |
+| `test_null_fields_are_dropped` | Fields the question doesn't restrict are left out |
+| `test_invalid_year_is_dropped` | A malformed year is discarded |
+| `test_schema_only_allows_values_in_the_data` | The structured-output schema rejects markets and commodities not in the data |
+| `test_failed_llm_call_falls_back_to_regex` | If the LLM call fails, the regex extractor is used |
+| `test_repeated_questions_are_cached` | The same question isn't sent to the LLM twice |
+| `test_auto_uses_regex_without_an_api_key` | Without an API key, the regex extractor is the default |
+| `test_retriever_uses_the_given_extractor` | The retriever filters with the configured extractor |
 
 ---
 
 ## Tech stack
 
-Python, FastAPI, Pydantic, Qdrant (`qdrant-client`), Sentence-Transformers (BGE embeddings, cross-encoder reranker), scikit-learn (TF-IDF), NumPy, OpenAI, RAGAS (with `langchain-openai` as the judge wrapper), pytest, GitHub Actions.
+Python, FastAPI, Pydantic, OpenAI structured outputs, Qdrant (`qdrant-client`), Sentence-Transformers (BGE embeddings, cross-encoder reranker), scikit-learn (TF-IDF), NumPy, OpenAI, RAGAS (with `langchain-openai` as the judge wrapper), pytest, GitHub Actions.
 
 ---
 
@@ -284,11 +326,13 @@ src/bm25.py                  lexical search
 src/embeddings.py            BGE or TF-IDF embeddings
 src/vector_store.py          in-memory or Qdrant vector store
 src/reranker.py              cross-encoder or keyword-overlap reranker
-src/retriever.py             filter extraction, metadata filtering, hybrid retrieval
+src/filter_extractor.py      LLM (structured output) or regex filter extraction
+src/retriever.py             metadata filtering, hybrid retrieval
 src/llm_provider.py          generation (OpenAI or template fallback)
 src/pipeline.py              orchestration, exact aggregates, cited answers, zero-match abstain
 src/evaluate.py              retrieval + aggregate evaluation
 src/compare_retrieval.py     embeddings / vector store comparison
+src/compare_filters.py       regex vs LLM filter extraction benchmark
 src/evaluate_ragas.py        RAGAS faithfulness evaluation
 results/                     saved comparison and RAGAS results
 tests/                       pipeline, regression, Qdrant and reranker tests
@@ -301,7 +345,7 @@ requirements-eval.txt        RAGAS evaluation (pinned)
 
 ## What I'd do next
 
-- Extract filters with an LLM structured-output call instead of regex, so phrasings like "last month" or "Manchar market" are understood.
+- Support date ranges and comparisons in filters ("Q1 2023", "March vs April"); filters currently hold a single year and month.
 - Evaluate on real (anonymised) receipt data, and use a stronger or repeated LLM judge to reduce RAGAS score variance.
 
 ---
